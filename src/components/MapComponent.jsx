@@ -1,12 +1,12 @@
 // components/MapComponent.jsx
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { navigateToLocation, makePhoneCall } from "../services/NavigationService";
-import { IonButton, IonIcon, IonBadge, IonLabel } from '@ionic/react';
+import { IonButton, IonIcon, IonBadge, IonSpinner } from '@ionic/react';
 import { call, navigateCircle } from 'ionicons/icons';
 
 // Fix icon issues
@@ -39,8 +39,15 @@ const parkingIcon = new L.Icon({
   iconAnchor: [12, 41]
 });
 
-const stayIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
+const medicalIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+
+const ambulanceIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-gold.png',
   shadowUrl: iconShadow,
   iconSize: [25, 41],
   iconAnchor: [12, 41]
@@ -48,16 +55,75 @@ const stayIcon = new L.Icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, category = 'food' }) => {
-  const defaultPosition = [18.125, 83.460]; // Default to Vizag coordinates
+// Helper component to recenter map
+function MapRecenter({ selectedPoint }) {
+  const map = useMap();
   
-  // Get appropriate icon based on location type
-  const getMarkerIcon = (type) => {
+  useEffect(() => {
+    if (selectedPoint) {
+      map.setView([selectedPoint.lat, selectedPoint.lng], 14);
+    }
+  }, [selectedPoint, map]);
+  
+  return null;
+}
+
+// Helper component to set a marker for Chitrada Village
+function ChitradaMarker() {
+  const map = useMap();
+  
+  useEffect(() => {
+    // Add a special marker for Chitrada Village
+    const chitradaMarker = L.marker([17.117, 82.253], {
+      icon: new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png',
+        shadowUrl: iconShadow,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41]
+      })
+    }).addTo(map);
+    
+    chitradaMarker.bindPopup("<b>Chitrada Village</b><br>Pithapuram Mandal, East Godavari").openPopup();
+    
+    return () => {
+      map.removeLayer(chitradaMarker);
+    };
+  }, [map]);
+  
+  return null;
+}
+
+const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, category = 'food' }) => {
+  // Chitrada Village coordinates (near Pithapuram, East Godavari)
+  const chitradaPosition = [17.117, 82.253];
+  const [isLoading, setIsLoading] = useState(true);
+  const [mapError, setMapError] = useState(null);
+  const [tileSource, setTileSource] = useState({
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: "© OpenStreetMap contributors"
+  });
+  
+  // Handle map load timeout
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isLoading) {
+        setMapError("Map is taking too long to load. This may indicate network issues.");
+      }
+    }, 10000);
+    
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+  
+  // Get appropriate icon based on location type and subtype
+  const getMarkerIcon = (point) => {
+    const type = point.type || category;
+    
     switch(type) {
       case 'food': return foodIcon;
       case 'water': return waterIcon;
       case 'parking': return parkingIcon;
-      case 'stay': return stayIcon;
+      case 'medical': 
+        return point.subType === 'ambulance' ? ambulanceIcon : medicalIcon;
       default: return DefaultIcon;
     }
   };
@@ -72,40 +138,124 @@ const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, ca
     }
   };
   
-  // Get contact phone based on location type
+  // Get contact info based on location type
   const getContactInfo = (point) => {
-    if (point.volunteers && point.volunteers[0]) {
-      return {
-        phone: point.volunteers[0].phone,
-        name: point.volunteers[0].name
-      };
-    }
     if (point.contactInfo) {
       return {
         phone: point.contactInfo.phone,
         name: point.contactInfo.name
       };
     }
+    
+    if (point.doctors && point.doctors[0]) {
+      return {
+        phone: point.doctors[0].phone,
+        name: point.doctors[0].name
+      };
+    }
+    
+    if (point.volunteers && point.volunteers[0]) {
+      return {
+        phone: point.volunteers[0].phone,
+        name: point.volunteers[0].name
+      };
+    }
+    
     return null;
   };
+  
+  // Handle tile error by switching to another provider
+  const handleTileError = () => {
+    console.log("Trying alternative tile source");
+    setTileSource({
+      url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+      attribution: "Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap"
+    });
+  };
+  
+  // If there's an error loading the map, show error message
+  if (mapError) {
+    return (
+      <div style={{ 
+        height: "400px", 
+        width: "100%", 
+        display: "flex", 
+        flexDirection: "column",
+        justifyContent: "center", 
+        alignItems: "center", 
+        textAlign: "center",
+        padding: "20px",
+        background: "#f4f4f4"
+      }}>
+        <h3>Map Loading Error</h3>
+        <p>{mapError}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          style={{
+            padding: '10px 20px',
+            background: '#3880ff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '16px'
+          }}
+        >
+          Retry Loading Map
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ height: "400px", width: "100%" }}>
+    <div style={{ height: "400px", width: "100%", position: "relative" }}>
+      {isLoading && (
+        <div style={{ 
+          position: "absolute", 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          backgroundColor: "rgba(255,255,255,0.7)", 
+          zIndex: 1000,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center"
+        }}>
+          <IonSpinner name="circles" />
+          <p style={{ marginTop: "10px" }}>Loading map...</p>
+        </div>
+      )}
+      
       <MapContainer 
-        center={selectedPoint ? [selectedPoint.lat, selectedPoint.lng] : defaultPosition} 
-        zoom={13} 
+        center={selectedPoint ? [selectedPoint.lat, selectedPoint.lng] : chitradaPosition} 
+        zoom={14} 
         style={{ height: "100%", width: "100%" }}
+        whenReady={() => setIsLoading(false)}
+        whenCreated={(mapInstance) => {
+          mapInstance.on('error', () => {
+            setMapError("There was an error loading the map.");
+          });
+        }}
       >
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="&copy; OpenStreetMap contributors"
+          url={tileSource.url}
+          attribution={tileSource.attribution}
+          eventHandlers={{
+            tileerror: handleTileError
+          }}
         />
+        
+        {/* Add the Chitrada Village marker */}
+        <ChitradaMarker />
+        
+        <MapRecenter selectedPoint={selectedPoint} />
         
         {points && points.map(point => (
           <Marker 
             key={point.id || Math.random()} 
             position={[point.lat, point.lng]}
-            icon={getMarkerIcon(point.type || category)}
+            icon={getMarkerIcon(point)}
             eventHandlers={{
               click: () => onMarkerClick(point)
             }}
@@ -114,28 +264,78 @@ const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, ca
               <div style={{ textAlign: 'center', minWidth: '200px' }}>
                 <h3 style={{ margin: '5px 0' }}>{point.name}</h3>
                 
-                {/* Show stay-specific details */}
-                {point.type === 'stay' && (
+                {/* Medical specific content */}
+                {point.type === 'medical' && (
                   <>
-                    {point.distance && <p>{point.distance}</p>}
-                    <div style={{ margin: '10px 0' }}>
-                      <IonBadge color={point.pricingType === 'free' ? 'success' : 'primary'}>
-                        {point.pricingType === 'free' ? 'FREE' : point.priceDetails?.perRoom}
-                      </IonBadge>
-                      
-                      {point.availability && (
-                        <IonBadge 
-                          color={getAvailabilityColor(point.availability)} 
-                          style={{marginLeft: '5px'}}
-                        >
-                          {point.availability} Availability
-                        </IonBadge>
-                      )}
-                    </div>
+                    {/* Ambulance specific content */}
+                    {point.subType === 'ambulance' && (
+                      <>
+                        <div style={{ margin: '10px 0' }}>
+                          <IonBadge color="danger">AMBULANCE SERVICE</IonBadge>
+                        </div>
+                        
+                        {point.response && (
+                          <p>Response Time: <strong>{point.response}</strong></p>
+                        )}
+                        
+                        {/* Removed operatingHours for ambulance as requested */}
+                        
+                        {point.availability && (
+                          <div style={{ margin: '5px 0' }}>
+                            <IonBadge color={getAvailabilityColor(point.availability)}>
+                              {point.availability} Availability
+                            </IonBadge>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Medical Camp specific content */}
+                    {point.subType === 'camp' && (
+                      <>
+                        <div style={{ margin: '10px 0' }}>
+                          <IonBadge color="tertiary">MEDICAL CAMP</IonBadge>
+                        </div>
+                        
+                        {/* Removed operatingHours and operatingDays for medical camps as requested */}
+                        
+                        {point.availability && (
+                          <div style={{ margin: '5px 0' }}>
+                            <IonBadge color={getAvailabilityColor(point.availability)}>
+                              {point.availability} Availability
+                            </IonBadge>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* First Aid specific content */}
+                    {point.subType === 'firstaid' && (
+                      <>
+                        <div style={{ margin: '10px 0' }}>
+                          <IonBadge color="warning">FIRST AID STATION</IonBadge>
+                        </div>
+                        
+                        {/* Removed operatingHours for consistency */}
+                        
+                        {point.availability && (
+                          <div style={{ margin: '5px 0' }}>
+                            <IonBadge color={getAvailabilityColor(point.availability)}>
+                              {point.availability} Availability
+                            </IonBadge>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Show service count */}
+                    {point.services && (
+                      <p>{point.services.filter(item => item.available).length} of {point.services.length} services available</p>
+                    )}
                   </>
                 )}
                 
-                {/* Show food specifics */}
+                {/* Food specifics */}
                 {point.type === 'food' && (
                   <>
                     <div style={{ margin: '10px 0' }}>
@@ -156,7 +356,7 @@ const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, ca
                   </>
                 )}
                 
-                {/* Show water specifics */}
+                {/* Water specifics */}
                 {point.type === 'water' && (
                   <>
                     <div style={{ margin: '10px 0' }}>
@@ -177,7 +377,7 @@ const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, ca
                   </>
                 )}
                 
-                {/* Show parking details */}
+                {/* Parking details */}
                 {point.type === 'parking' && (
                   <>
                     {point.capacity && (
@@ -193,12 +393,14 @@ const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, ca
                   <div style={{ margin: '10px 0' }}>
                     <IonButton 
                       expand="block" 
-                      color="success" 
+                      color={point.type === 'medical' && point.subType === 'ambulance' ? 'danger' : 'success'} 
                       size="small"
                       onClick={() => makePhoneCall(getContactInfo(point).phone)}
                     >
                       <IonIcon slot="start" icon={call}></IonIcon>
-                      Call {getContactInfo(point).name}
+                      {point.type === 'medical' && point.subType === 'ambulance' 
+                        ? 'Call Ambulance' 
+                        : `Call ${getContactInfo(point).name}`}
                     </IonButton>
                   </div>
                 )}

@@ -1,0 +1,261 @@
+/* components/DetailedLocationView.css */
+
+/* Container styles */
+.detailed-view-container {
+    max-width: 100%;
+    padding: 0;
+  }
+  
+  /* Card styles */
+  .location-detail-card,
+  .stay-detail-card {
+    margin: 0;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  
+  /* Header styles */
+  .location-header,
+  .stay-detail-header {
+    padding: 16px;
+  }
+  
+  .location-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  
+  .location-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+  
+  .availability-container,
+  .status-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  
+  .availability-chip,
+  .status-chip {
+    margin: 0;
+  }
+  
+  /* Action buttons */
+  .action-buttons,
+  .quick-actions {
+    margin-top: 16px;
+  }
+  
+  .navigate-button,
+  .call-button {
+    margin-bottom: 8px;
+  }
+  
+  /* Section cards */
+  .detail-section-card {
+    margin-bottom: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .section-header {
+    padding: 12px;
+  }
+  
+  .section-title {
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+    gap: 8px;
+  }
+  
+  .section-content {
+    padding: 12px;
+  }
+  
+  /* Accordion styles */
+  .location-accordion {
+    margin-bottom: 12px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .accordion-header {
+    --background: var(--ion-color-light);
+    --color: var(--ion-color-dark);
+  }
+  
+  .accordion-content {
+    padding: 0 0 12px 0;
+  }
+  
+  .accordion-subtitle {
+    padding: 8px 16px 0;
+  }
+  
+  /* List items */
+  .item-list,
+  .hours-list {
+    padding: 0;
+  }
+  
+  .menu-item,
+  .water-item,
+  .hours-item {
+    --padding-start: 16px;
+    --padding-end: 16px;
+  }
+  
+  /* Volunteer styles */
+  .volunteer-card {
+    margin: 8px 16px;
+    border-radius: 8px;
+  }
+  
+  .volunteer-header {
+    padding: 12px;
+  }
+  
+  .volunteer-name {
+    font-size: 18px;
+  }
+  
+  .volunteer-role {
+    color: var(--ion-color-medium);
+  }
+  
+  .volunteer-content {
+    padding: 0 12px 12px;
+  }
+  
+  .volunteer-call-button {
+    margin: 0;
+  }
+  
+  /* Availability notes & badges */
+  .availability-note,
+  .volunteer-count {
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
+  .availability-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  
+  /* Pricing grid */
+  .pricing-grid {
+    padding: 0;
+  }
+  
+  .pricing-row {
+    border-bottom: 1px solid var(--ion-color-light);
+  }
+  
+  .pricing-row.header {
+    font-weight: 600;
+    border-bottom: 2px solid var(--ion-color-light);
+  }
+  
+  .pricing-label {
+    padding: 8px 4px;
+  }
+  
+  .pricing-value {
+    padding: 8px 4px;
+    text-align: right;
+  }
+  
+  /* Free stay info */
+  .free-stay-info p {
+    margin: 0 0 12px 0;
+  }
+  
+  .requirement-note {
+    background-color: rgba(var(--ion-color-warning-rgb), 0.1);
+    padding: 8px;
+    border-radius: 4px;
+  }
+  
+  /* Amenities */
+  .amenities-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+  }
+  
+  .amenity-chip {
+    margin: 0;
+  }
+  
+  /* Parking details */
+  .parking-details {
+    padding: 0 16px;
+  }
+  
+  .parking-grid {
+    padding: 0;
+  }
+  
+  .detail-label {
+    font-weight: 500;
+  }
+  
+  .detail-value {
+    text-align: right;
+  }
+  
+  /* Contact info */
+  .contact-info p {
+    margin: 4px 0;
+  }
+  
+  .contact-button {
+    margin: 16px 0 8px 0;
+  }
+  
+  .action-buttons-container {
+    margin-top: 12px;
+  }
+  
+  .action-button {
+    margin: 0;
+  }
+  
+  /* Medical info */
+  .medical-info p {
+    margin: 8px 16px;
+  }
+  
+  .medical-services-list {
+    margin: 8px 16px 16px 32px;
+    padding: 0;
+  }
+  
+  .emergency-call-button {
+    margin: 0 16px;
+  }
+  
+  /* Hours */
+  .time-note {
+    font-weight: 500;
+    color: var(--ion-color-dark);
+  }
+  
+  /* Share button */
+  .share-container {
+    margin-top: 24px;
+  }
+  
+  .share-button {
+    margin: 0;
+  }

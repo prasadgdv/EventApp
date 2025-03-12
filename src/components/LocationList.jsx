@@ -4,7 +4,7 @@ import {
   IonList, IonItem, IonLabel, IonIcon, IonNote, IonBadge, 
   IonItemSliding, IonItemOptions, IonItemOption
 } from '@ionic/react';
-import { call, fastFood, water, car, bed, navigate } from 'ionicons/icons';
+import { call, fastFood, water, car, medkit, navigate, time } from 'ionicons/icons';
 import { navigateToLocation, makePhoneCall } from '../services/NavigationService';
 
 const LocationList = ({ locations, onItemClick, category }) => {
@@ -15,12 +15,14 @@ const LocationList = ({ locations, onItemClick, category }) => {
   };
   
   // Get appropriate icon for category
-  const getCategoryIcon = () => {
-    switch(category) {
+  const getCategoryIcon = (point) => {
+    const type = point.type || category;
+    
+    switch(type) {
       case 'food': return fastFood;
       case 'water': return water;
       case 'parking': return car;
-      case 'stay': return bed;
+      case 'medical': return medkit;
       default: return navigate;
     }
   };
@@ -44,10 +46,15 @@ const LocationList = ({ locations, onItemClick, category }) => {
         return 'Free Distribution';
       case 'parking': 
         return location.capacity;
-      case 'stay': 
-        return location.pricingType === 'free' 
-          ? 'Free Accommodation' 
-          : `${location.priceDetails?.perRoom || 'Paid'} per room`;
+      case 'medical':
+        if (location.subType === 'ambulance') {
+          return `Ambulance Service - ${location.response || 'Emergency'}`;
+        } else if (location.subType === 'camp') {
+          return `Medical Camp - ${location.operatingHours || ''}`;
+        } else if (location.subType === 'firstaid') {
+          return 'First Aid Station';
+        }
+        return 'Medical Services';
       default: 
         return '';
     }
@@ -55,20 +62,26 @@ const LocationList = ({ locations, onItemClick, category }) => {
 
   // Get tertiary text based on category
   const getTertiaryText = (location) => {
-    if (location.distance && (location.type === 'stay' || category === 'stay')) {
-      return location.distance;
+    if (location.type === 'medical') {
+      return location.operatingHours;
     }
     return null;
   };
 
   // Get contact phone based on location type
   const getContactPhone = (location) => {
-    if (location.volunteers && location.volunteers[0]) {
-      return location.volunteers[0].phone;
-    }
     if (location.contactInfo && location.contactInfo.phone) {
       return location.contactInfo.phone;
     }
+    
+    if (location.doctors && location.doctors[0]) {
+      return location.doctors[0].phone;
+    }
+    
+    if (location.volunteers && location.volunteers[0]) {
+      return location.volunteers[0].phone;
+    }
+    
     return null;
   };
   
@@ -77,11 +90,19 @@ const LocationList = ({ locations, onItemClick, category }) => {
       {locations.map(location => (
         <IonItemSliding key={location.id}>
           <IonItem button onClick={() => onItemClick(location)}>
-            <IonIcon icon={getCategoryIcon()} slot="start" />
+            <IonIcon icon={getCategoryIcon(location)} slot="start" />
             <IonLabel>
               <h2>{location.name}</h2>
               <p>{getSecondaryText(location)}</p>
               {getTertiaryText(location) && <p>{getTertiaryText(location)}</p>}
+              
+              {/* For medical locations, show response time or operating hours */}
+              {location.type === 'medical' && location.subType === 'ambulance' && location.response && (
+                <p>
+                  Response: {location.response}
+                </p>
+              )}
+              
               {location.availability && (
                 <p>
                   Availability: 
@@ -109,9 +130,20 @@ const LocationList = ({ locations, onItemClick, category }) => {
               </IonNote>
             )}
             
-            {/* Show FREE badge for free stays */}
-            {location.pricingType === 'free' && location.type === 'stay' && (
-              <IonBadge color="success" slot="end">FREE</IonBadge>
+            {/* Show medical services count */}
+            {location.services && (
+              <IonNote slot="end">
+                {location.services.filter(item => item.available).length} of {location.services.length} services
+              </IonNote>
+            )}
+            
+            {/* Show special badges for medical locations */}
+            {location.type === 'medical' && location.subType === 'ambulance' && (
+              <IonBadge color="danger" slot="end">AMBULANCE</IonBadge>
+            )}
+            
+            {location.type === 'medical' && location.subType === 'firstaid' && (
+              <IonBadge color="warning" slot="end">FIRST AID</IonBadge>
             )}
           </IonItem>
           
@@ -130,7 +162,7 @@ const LocationList = ({ locations, onItemClick, category }) => {
             {/* Call option - only if contact exists */}
             {getContactPhone(location) && (
               <IonItemOption 
-                color="success"
+                color={location.type === 'medical' && location.subType === 'ambulance' ? 'danger' : 'success'}
                 onClick={(e) => callContact(getContactPhone(location), e)}
               >
                 <IonIcon slot="icon-only" icon={call}></IonIcon>

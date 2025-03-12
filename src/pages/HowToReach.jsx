@@ -3,53 +3,58 @@ import React from 'react';
 import { 
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButtons, IonBackButton, IonCard, IonCardHeader, IonCardContent, 
-  IonCardTitle, IonCardSubtitle, IonIcon, IonItem, IonButton
+  IonCardTitle, IonCardSubtitle, IonIcon, IonItem, IonButton, IonLabel
 } from '@ionic/react';
 import { 
-  car, bus, train, airplane, boat, navigate, 
+  car, bus, train, airplane, navigate, 
   callOutline, informationCircleOutline
 } from 'ionicons/icons';
-import { navigateToLocation } from '../services/NavigationService';
+import { navigateToLocation, makePhoneCall } from '../services/NavigationService';
 
 const HowToReach = () => {
-  const eventLocation = { lat: 18.125, lng: 83.460 };
+  // Correct coordinates for Chitrada Village
+  const chitradaLocation = { lat: 17.117, lng: 82.253 };
   
   const transportOptions = [
     {
       id: 1,
       title: 'By Car',
       icon: car,
-      description: 'Take National Highway 16 (NH16) to reach the venue. Parking available at the event site.',
+      description: 'Take National Highway 16 (NH16) to Pithapuram, then local roads to Chitrada Village. Main parking available at the event site.',
       contactInfo: '+91 9876543210 (Traffic Help)',
       additionalInfo: 'Expect heavy traffic between 9-11 AM. Plan accordingly.',
-      action: 'Drive Now'
+      action: 'Drive Now',
+      onActionClick: () => navigateToLocation(chitradaLocation.lat, chitradaLocation.lng)
     },
     {
       id: 2,
       title: 'By Bus',
       icon: bus,
-      description: 'City buses 101, 203, and 305 stop at the venue entrance. The Bus Stand is 5km away.',
+      description: 'RTC buses from Kakinada to Pithapuram, then local auto to Chitrada Village. Mini buses also available on event day.',
       contactInfo: '+91 9876543211 (Bus Information)',
-      additionalInfo: 'Buses run every 30 minutes from the main bus terminal.',
-      action: 'View Bus Routes'
+      additionalInfo: 'Buses run every 30 minutes from Kakinada bus terminal.',
+      action: 'Call Bus Info',
+      onActionClick: () => makePhoneCall('9876543211')
     },
     {
       id: 3,
       title: 'By Train',
       icon: train,
-      description: 'The nearest railway station is 7km away. Taxis and auto-rickshaws are available outside.',
-      contactInfo: '+91 9876543212 (Railway Information)',
-      additionalInfo: 'Special shuttle service available on event days.',
-      action: 'View Train Schedule'
+      description: 'Nearest railway station is Pithapuram, 6km away. Taxis and auto-rickshaws are available outside the station.',
+      contactInfo: '+91 9876543212 (Station Info)',
+      additionalInfo: 'Special shuttle service available on event days from Pithapuram station.',
+      action: 'Call Station Info',
+      onActionClick: () => makePhoneCall('9876543212')
     },
     {
       id: 4,
       title: 'By Air',
       icon: airplane,
-      description: 'The airport is 15km from the venue. Pre-paid taxis are available at the terminal.',
+      description: 'Nearest airport is Rajahmundry (RJA), approximately 75km away. Pre-paid taxis available to Chitrada.',
       contactInfo: '+91 9876543213 (Airport Taxi)',
-      additionalInfo: 'Taxi fare is approximately ₹500.',
-      action: 'Book Airport Taxi'
+      additionalInfo: 'Taxi fare is approximately ₹1500.',
+      action: 'Book Airport Taxi',
+      onActionClick: () => makePhoneCall('9876543213')
     }
   ];
   
@@ -66,17 +71,17 @@ const HowToReach = () => {
       <IonContent>
         <IonCard>
           <IonCardHeader>
-            <IonCardTitle>Event Location</IonCardTitle>
-            <IonCardSubtitle>Vizag Exhibition Grounds, Andhra Pradesh</IonCardSubtitle>
+            <IonCardTitle>Chitrada Village</IonCardTitle>
+            <IonCardSubtitle>Pithapuram Mandal, East Godavari</IonCardSubtitle>
           </IonCardHeader>
           <IonCardContent>
-            <p>The event is located at the Exhibition Grounds, easily accessible from all parts of the city.</p>
+            <p>The event is located at Chitrada Village, easily accessible from major towns in East Godavari.</p>
             <IonButton 
               expand="block" 
-              onClick={() => navigateToLocation(eventLocation.lat, eventLocation.lng)}
+              onClick={() => navigateToLocation(chitradaLocation.lat, chitradaLocation.lng)}
             >
               <IonIcon slot="start" icon={navigate}></IonIcon>
-              Navigate to Event
+              Navigate to Chitrada
             </IonButton>
           </IonCardContent>
         </IonCard>
@@ -103,7 +108,7 @@ const HowToReach = () => {
                 <IonLabel>{option.additionalInfo}</IonLabel>
               </IonItem>
               
-              <IonButton expand="block">
+              <IonButton expand="block" onClick={option.onActionClick}>
                 {option.action}
               </IonButton>
             </IonCardContent>
