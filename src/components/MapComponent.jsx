@@ -98,6 +98,7 @@ const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, ca
   const chitradaPosition = [17.117, 82.253];
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState(null);
+  const [mapLoadTimeout, setMapLoadTimeout] = useState(false);
   const [tileSource, setTileSource] = useState({
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: "© OpenStreetMap contributors"
@@ -107,12 +108,38 @@ const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, ca
   useEffect(() => {
     const timer = setTimeout(() => {
       if (isLoading) {
-        setMapError("Map is taking too long to load. This may indicate network issues.");
+        setMapLoadTimeout(true);
       }
-    }, 10000);
+    }, 5000);
     
     return () => clearTimeout(timer);
   }, [isLoading]);
+  
+  // Adding check for Azure hosting - this will help detect if running on Azure
+  useEffect(() => {
+    const isAzureHosted = window.location.hostname.includes('azurewebsites.net');
+    if (isAzureHosted) {
+      console.log("Running on Azure App Service - using alternative tile source to avoid CORS issues");
+      setTileSource({
+        url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        attribution: "Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap"
+      });
+    }
+    
+    // Test storage access
+    const testStorage = async () => {
+      try {
+        // Test if localStorage is available
+        localStorage.setItem('map_test', 'test');
+        localStorage.removeItem('map_test');
+      } catch (storageError) {
+        console.error("Storage access error:", storageError);
+        setMapError("Storage access is restricted. Some features may not work properly.");
+      }
+    };
+    
+    testStorage();
+  }, []);
   
   // Get appropriate icon based on location type and subtype
   const getMarkerIcon = (point) => {
@@ -164,16 +191,30 @@ const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, ca
     return null;
   };
   
-  // Handle tile error by switching to another provider
+  // Handle tile error by switching to another provider with improved error handling
   const handleTileError = () => {
-    console.log("Trying alternative tile source");
-    setTileSource({
-      url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-      attribution: "Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap"
-    });
+    console.log("Tile loading error detected, trying alternative tile source");
+    
+    // Try multiple tile sources in order of preference
+    if (tileSource.url.includes('openstreetmap.org')) {
+      console.log("Switching to OpenTopoMap tiles");
+      setTileSource({
+        url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        attribution: "Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap"
+      });
+    } else if (tileSource.url.includes('opentopomap.org')) {
+      console.log("Switching to Stamen tiles");
+      setTileSource({
+        url: "https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}.png",
+        attribution: "Map tiles by Stamen Design, CC BY 3.0 — Map data © OpenStreetMap"
+      });
+    } else {
+      // If all alternatives have been exhausted, show error
+      setMapError("Unable to load map tiles from any source. Please check your internet connection.");
+    }
   };
   
-  // If there's an error loading the map, show error message
+  // If there's an error loading the map, show error message with retry option
   if (mapError) {
     return (
       <div style={{ 
@@ -189,19 +230,19 @@ const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, ca
       }}>
         <h3>Map Loading Error</h3>
         <p>{mapError}</p>
-        <button 
-          onClick={() => window.location.reload()}
-          style={{
-            padding: '10px 20px',
-            background: '#3880ff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '16px'
+        <IonButton 
+          onClick={() => {
+            setMapError(null);
+            setIsLoading(true);
+            setTileSource({
+              url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              attribution: "© OpenStreetMap contributors"
+            });
+            window.location.reload();
           }}
         >
           Retry Loading Map
-        </button>
+        </IonButton>
       </div>
     );
   }
@@ -224,6 +265,19 @@ const MapComponent = ({ points = [], selectedPoint, onMarkerClick = () => {}, ca
         }}>
           <IonSpinner name="circles" />
           <p style={{ marginTop: "10px" }}>Loading map...</p>
+          {mapLoadTimeout && (
+            <IonButton 
+              onClick={() => {
+                setTileSource({
+                  url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+                  attribution: "Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap"
+                });
+              }}
+              style={{ marginTop: "10px" }}
+            >
+              Try Alternative Map Source
+            </IonButton>
+          )}
         </div>
       )}
       

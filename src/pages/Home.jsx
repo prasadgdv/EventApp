@@ -1,17 +1,18 @@
 // pages/Home.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonSplitPane, IonMenu, IonButtons, IonMenuButton,
   IonSegment, IonSegmentButton, IonLabel, IonModal,
-  IonButton, IonIcon, IonFooter, IonToast, IonLoading
+  IonButton, IonIcon, IonFooter, IonToast, IonLoading,
+  isPlatform, IonMenuToggle, IonAlert
 } from '@ionic/react';
 import MapComponent from '../components/MapComponent';
 import LocationList from '../components/LocationList';
 import DetailedLocationView from '../components/DetailedLocationView';
 import { downloadAndStoreTiles, getTileCacheStats } from '../services/MapTileService';
 import { fetchLocations } from '../services/DataService';
-import { close, download, refresh, informationCircle } from 'ionicons/icons';
+import { close, download, refresh, informationCircle, menu } from 'ionicons/icons';
 
 const Home = () => {
   // Chitrada Village coordinates
@@ -34,6 +35,62 @@ const Home = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [toastColor, setToastColor] = useState('success');
   const [showChitradaInfo, setShowChitradaInfo] = useState(false);
+  
+  // Mobile specific state
+  const [isMobile, setIsMobile] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [storagePermissionIssue, setStoragePermissionIssue] = useState(false);
+  const [mapLoadError, setMapLoadError] = useState(false);
+  const menuRef = useRef(null);
+  
+  // Detect mobile device on initial load
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = isPlatform('mobile') || 
+                     /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+                     window.innerWidth < 768;
+      setIsMobile(mobile);
+      
+      // If on mobile, manually force the menu to open on first load
+      if (mobile) {
+        setTimeout(() => {
+          const ionMenuElement = document.querySelector('ion-menu');
+          if (ionMenuElement) {
+            setShowMenu(true);
+            // Try to trigger the menu controller programmatically
+            try {
+              document.querySelector('ion-menu-controller')?.open();
+            } catch (e) {
+              console.log('Menu controller not available yet');
+            }
+          }
+        }, 1000);
+      }
+    };
+    
+    checkMobile();
+    
+    // Listen for window resize to recalculate mobile status
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  // Check storage access on load
+  useEffect(() => {
+    const checkStorageAccess = async () => {
+      try {
+        // Test if we can write to storage
+        const storageTest = 'test' + Date.now();
+        localStorage.setItem(storageTest, storageTest);
+        localStorage.removeItem(storageTest);
+      } catch (e) {
+        console.error('Storage access issue:', e);
+        setStoragePermissionIssue(true);
+      }
+    };
+    
+    checkStorageAccess();
+  }, []);
   
   // Update the mock data for Chitrada village region
   useEffect(() => {
@@ -86,6 +143,9 @@ const Home = () => {
       }
     } catch (error) {
       console.error("Error checking offline maps:", error);
+      if (isMobile) {
+        setStoragePermissionIssue(true);
+      }
     }
   };
   
@@ -98,6 +158,17 @@ const Home = () => {
   
   // Handle offline map download for Chitrada area
   const handleDownloadMaps = async () => {
+    // Check storage access first
+    try {
+      const testKey = 'storage_test_' + Date.now();
+      localStorage.setItem(testKey, 'test');
+      localStorage.removeItem(testKey);
+    } catch (e) {
+      showToastMessage("Storage access denied. Offline maps require storage permission.", "danger");
+      setStoragePermissionIssue(true);
+      return;
+    }
+    
     setIsDownloading(true);
     try {
       const result = await downloadAndStoreTiles(chitradaCoordinates.lat, chitradaCoordinates.lng, 20);
@@ -117,6 +188,15 @@ const Home = () => {
   const handleItemClick = (item) => {
     setSelectedPoint(item);
     setShowDetailModal(true);
+    // On mobile, close the menu when selecting an item
+    if (isMobile) {
+      setShowMenu(false);
+      try {
+        document.querySelector('ion-menu-controller')?.close();
+      } catch (e) {
+        console.log('Menu controller not available');
+      }
+    }
   };
   
   // Get active points based on selected category
@@ -141,19 +221,56 @@ const Home = () => {
     }
   };
   
+  // Toggle menu visibility for mobile
+  const toggleMenu = () => {
+    setShowMenu(!showMenu);
+    try {
+      const menuController = document.querySelector('ion-menu-controller');
+      if (menuController) {
+        if (showMenu) {
+          menuController.close();
+        } else {
+          menuController.open();
+        }
+      }
+    } catch (e) {
+      console.error('Error controlling menu:', e);
+    }
+  };
+  
+  // Handle storage permission issues
+  const handleStoragePermissionHelp = () => {
+    setStoragePermissionIssue(false);
+    showToastMessage("Please check browser settings to allow storage access", "warning");
+  };
+  
+  // Handle map loading error
+  const handleMapError = () => {
+    setMapLoadError(true);
+    showToastMessage("Map failed to load. Please check your internet connection.", "danger");
+  };
+  
   return (
     <IonPage>
-      <IonSplitPane contentId="main">
-        <IonMenu contentId="main">
+      <IonSplitPane when="md" contentId="main">
+        <IonMenu contentId="main" ref={menuRef} type={isMobile ? "overlay" : "push"}>
           <IonHeader>
             <IonToolbar>
-              <IonTitle>Janasena Formation Day Event Guide</IonTitle>
+              <IonTitle>Janasena Formation Day Guide</IonTitle>
+              {/* On mobile, add a Close button in the menu header */}
+              {isMobile && (
+                <IonButtons slot="end">
+                  <IonMenuToggle>
+                    <IonButton>
+                      <IonIcon slot="icon-only" icon={close} />
+                    </IonButton>
+                  </IonMenuToggle>
+                </IonButtons>
+              )}
             </IonToolbar>
           </IonHeader>
           
           <IonContent>
-            {/* Village info card has been removed as requested */}
-            
             <IonSegment value={activeCategory} onIonChange={e => setActiveCategory(e.detail.value)}>
               <IonSegmentButton value="food">
                 <IonLabel>Food</IonLabel>
@@ -180,11 +297,23 @@ const Home = () => {
               <IonButton 
                 expand="block"
                 onClick={handleDownloadMaps}
-                disabled={isDownloading}
+                disabled={isDownloading || storagePermissionIssue}
               >
                 <IonIcon slot="start" icon={download} />
                 Download Offline Maps
               </IonButton>
+              
+              {/* Show help button for storage issues */}
+              {storagePermissionIssue && (
+                <IonButton
+                  expand="block"
+                  color="warning"
+                  className="ion-margin-top"
+                  onClick={handleStoragePermissionHelp}
+                >
+                  Storage Permission Required
+                </IonButton>
+              )}
               
               <IonButton 
                 expand="block"
@@ -202,8 +331,15 @@ const Home = () => {
         <IonPage id="main">
           <IonHeader>
             <IonToolbar>
+              {/* Enhanced menu button for mobile */}
               <IonButtons slot="start">
-                <IonMenuButton />
+                {isMobile ? (
+                  <IonButton onClick={toggleMenu}>
+                    <IonIcon icon={menu} />
+                  </IonButton>
+                ) : (
+                  <IonMenuButton />
+                )}
               </IonButtons>
               <IonTitle>Chitrada: {getCategoryTitle()}</IonTitle>
               {/* Info button */}
@@ -221,7 +357,37 @@ const Home = () => {
               selectedPoint={selectedPoint}
               onMarkerClick={handleItemClick}
               category={activeCategory}
+              onMapError={handleMapError}
             />
+            
+            {/* Map error recovery UI */}
+            {mapLoadError && (
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 1000,
+                backgroundColor: 'white',
+                padding: '20px',
+                borderRadius: '10px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                textAlign: 'center',
+                width: '80%'
+              }}>
+                <h3>Map Loading Error</h3>
+                <p>There was a problem loading the map.</p>
+                <IonButton 
+                  expand="block" 
+                  onClick={() => {
+                    setMapLoadError(false);
+                    window.location.reload();
+                  }}
+                >
+                  Retry Loading Map
+                </IonButton>
+              </div>
+            )}
           </IonContent>
           
           <IonFooter>
@@ -381,6 +547,22 @@ const Home = () => {
           </IonButton>
         </IonContent>
       </IonModal>
+      
+      {/* Storage permission alert */}
+      <IonAlert
+        isOpen={storagePermissionIssue}
+        onDidDismiss={() => setStoragePermissionIssue(false)}
+        header="Storage Access Required"
+        message="This app needs storage access to save offline maps. Please check your browser settings and enable storage permission."
+        buttons={[
+          {
+            text: 'OK',
+            handler: () => {
+              setStoragePermissionIssue(false);
+            }
+          }
+        ]}
+      />
       
       {/* Toast for notifications */}
       <IonToast
