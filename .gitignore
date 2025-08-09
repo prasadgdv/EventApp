@@ -1,32 +1,86 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# production
-/dist
-
-# misc
-.DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-/.nx
-/.nx/cache
-/.vscode/*
-!/.vscode/extensions.json
-.idea
-
+# Dependencies
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Production builds
+/dist
+/build
+/www
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
 # Optional eslint cache
 .eslintcache
-.env
+
+# Capacitor
+/android
+/ios
+.capacitor/
+
+# Ionic
+.ionic/
+
+# Testing
+/coverage
+
+# Temporary files
+.tmp/
+.temp/
+
+# Local storage and cache
+.cache/
+.parcel-cache/
+
+# Build artifacts
+*.tgz
+*.tar.gz
+
+# Azure deployment files (keep the workflows but ignore deployment artifacts)
+.deployment
+.azure/
+
+# Map tiles cache (if stored locally during development)
+tiles/
+map-cache/
